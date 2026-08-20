@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const textWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const strayMarkers = [];
+    while (textWalker.nextNode()) {
+        if (/^[+\s]+$/.test(textWalker.currentNode.textContent)) strayMarkers.push(textWalker.currentNode);
+    }
+    strayMarkers.forEach(node => node.remove());
     const studyKey = 'quiet-word-studies';
     const draftKey = 'quiet-word-draft';
     const themeKey = 'quiet-word-theme';
