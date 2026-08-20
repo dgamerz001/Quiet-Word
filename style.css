@@ -252,6 +252,25 @@ html[data-theme="dark"] .progress-track { background: #30463a; }
 .plan-detail-card > p { max-width: 650px; }
 .plan-start-input { min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--paper); color: var(--ink); margin: 0 10px 18px 0; }
 .plan-schedule { display: grid; gap: 8px; margin-top: 24px; }
+.streak-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.streak-stat-card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.streak-stat-card .stat-icon { margin-bottom: 12px; }
+.streak-stat-card strong { font: 700 clamp(26px, 3vw, 38px) var(--serif); line-height: 1; }
+.streak-stat-card > span:not(.stat-icon) { color: var(--green); font-weight: 700; margin-top: 8px; overflow-wrap: anywhere; }
+.streak-detail-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr); gap: 16px; margin-top: 18px; }
+.streak-detail-grid .form-card { margin-bottom: 0; }
+.streak-calendar { min-width: 0; }
+.calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.calendar-weekdays { color: var(--faint); font-size: 11px; text-align: center; margin-bottom: 8px; }
+.calendar-cell { aspect-ratio: 1; min-width: 0; border-radius: 7px; display: grid; place-items: center; color: var(--muted); background: var(--canvas); font-size: 12px; }
+.calendar-cell.is-complete { background: var(--sage); color: var(--deep); font-weight: 700; }
+.calendar-cell.is-today { border: 2px solid var(--green); color: var(--green); font-weight: 700; }
+.calendar-cell.is-future { opacity: .45; }
+.calendar-cell.is-blank { background: transparent; }
+.recent-activity { display: grid; gap: 4px; }
+.recent-activity-row { display: grid; grid-template-columns: 10px 1fr; gap: 4px 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--ink); }
+.recent-activity-row small { grid-column: 2; color: var(--muted); }
+.activity-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); grid-row: 1 / span 2; }
 
 @media (max-width: 900px) {
     .insights-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -259,6 +278,8 @@ html[data-theme="dark"] .progress-track { background: #30463a; }
 @media (max-width: 800px) {
     .v2-grid, .insights-grid { grid-template-columns: 1fr; }
     .v2-card, .insight-card { padding: 20px; }
+    .streak-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .streak-detail-grid { grid-template-columns: 1fr; }
     .dashboard-plan-card { align-items: stretch; flex-direction: column; margin-top: -12px; padding: 20px; }
     .dashboard-plan-card .card-actions { flex-direction: column; }
     .dashboard-plan-card .btn { width: 100%; }
@@ -267,4 +288,7 @@ html[data-theme="dark"] .progress-track { background: #30463a; }
 }
 @media (max-width: 520px) {
     .v2-card, .insight-card { padding: 18px; }
+    .streak-stat-card { padding: 15px; }
+    .calendar-weekdays, .calendar-grid { gap: 4px; }
+    .calendar-cell { font-size: 11px; }
 }

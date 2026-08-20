@@ -9,9 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const draftKey = 'quiet-word-draft';
     const themeKey = 'quiet-word-theme';
     const planKey = 'quiet-word-plans';
+    const streakKey = 'quiet-word-streak-activity';
     const prayerKey = 'quiet-word-prayers';
     const collectionKey = 'quiet-word-collections';
-    const today = new Date().toISOString().slice(0, 10);
+    const localDate = value => { const date = value instanceof Date ? value : new Date(value); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
+    const today = localDate(new Date());
     const form = document.getElementById('study-form');
     const fields = ['reference', 'date', 'learned', 'reflection', 'application', 'questions', 'prayer'];
     let studies = JSON.parse(localStorage.getItem(studyKey) || '[]').map(study => ({ completed: true, tags: [], collectionIds: [], ...study }));
@@ -23,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'proverbs-31', planName: 'Proverbs in 31 Days', description: 'A practical daily rhythm through Proverbs.', duration: 31, readings: ['Proverbs 1', 'Proverbs 2', 'Proverbs 3', 'Proverbs 4', 'Proverbs 5'] }
     ];
     const dateOnly = value => new Date(`${value}T12:00:00`);
-    const dateString = value => dateOnly(value).toISOString().slice(0, 10);
+    const dateString = value => localDate(dateOnly(value));
     const addDays = (value, days) => { const date = dateOnly(value); date.setDate(date.getDate() + days); return dateString(date.toISOString().slice(0, 10)); };
     const planReadings = definition => Array.from({ length: definition.duration }, (_, index) => definition.readings[index % definition.readings.length] || `${definition.planName} · Day ${index + 1}`);
     const makeSchedule = (readings, startDate) => readings.map((reference, index) => ({ dayNumber: index + 1, date: addDays(startDate, index), reference, completed: false, completedAt: null }));
@@ -35,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { id: plan.id || uid(), userId: null, planName: plan.name || 'Untitled plan', description: plan.description || '', startDate: plan.startDate || null, targetDate: plan.targetDate || (schedule.length ? schedule[schedule.length - 1].date : null), status: plan.status || 'saved', currentDay: 1, schedule, completedReadings: schedule.filter(item => item.completed).map(item => item.dayNumber), createdAt: plan.createdAt || today, updatedAt: today };
     };
     let plans = JSON.parse(localStorage.getItem(planKey) || '[]').map(normalizePlan);
+    let storedActivity = JSON.parse(localStorage.getItem(streakKey) || '[]');
     let prayers = JSON.parse(localStorage.getItem(prayerKey) || '[]');
     let collections = JSON.parse(localStorage.getItem(collectionKey) || '[]');
     let editingId = null;
@@ -47,9 +50,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const savePlans = () => localStorage.setItem(planKey, JSON.stringify(plans));
     const savePrayers = () => localStorage.setItem(prayerKey, JSON.stringify(prayers));
     const saveCollections = () => localStorage.setItem(collectionKey, JSON.stringify(collections));
+    const saveActivity = () => localStorage.setItem(streakKey, JSON.stringify(storedActivity));
     const escapeAttribute = value => escapeHtml(value).replace(/`/g, '&#096;');
 
     function emptyState(title, copy) { return `<div class="empty-state"><i class="ph ph-notebook"></i><h3>${title}</h3><p>${copy}</p></div>`; }
+
+    function syncReadingActivity() {
+        const records = new Map();
+        studies.forEach(study => { if (study.date && study.date <= today) records.set(study.date, { date: study.date, activityType: 'study', sourceId: study.id }); });
+        plans.forEach(plan => plan.schedule.forEach(reading => { if (reading.completed && reading.date <= today) records.set(reading.date, { date: reading.date, activityType: 'plan-reading', sourceId: plan.id, planId: plan.id }); }));
+        storedActivity = [...records.values()].sort((a, b) => a.date.localeCompare(b.date));
+        saveActivity();
+        return storedActivity;
+    }
+
+    function streakStats() {
+        const activity = syncReadingActivity();
+        const dates = new Set(activity.map(item => item.date));
+        let currentStreak = 0;
+        let cursor = today;
+        while (dates.has(cursor)) { currentStreak += 1; cursor = addDays(cursor, -1); }
+        let longestStreak = 0;
+        let run = 0;
+        let previous = null;
+        activity.forEach(item => { run = previous && addDays(previous, 1) === item.date ? run + 1 : 1; longestStreak = Math.max(longestStreak, run); previous = item.date; });
+        return { currentStreak, longestStreak, totalReadingDays: activity.length, totalCompletedReadings: plans.reduce((count, plan) => count + plan.schedule.filter(item => item.completed).length, 0), lastActiveDate: activity.at(-1)?.date || null, activity };
+    }
+
+    function renderStreakDetails() {
+        const stats = streakStats();
+        document.getElementById('streak-stats').innerHTML = `<article class="streak-stat-card"><span class="stat-icon"><i class="ph ph-fire"></i></span><strong>${stats.currentStreak}</strong><span>Current streak</span></article><article class="streak-stat-card"><span class="stat-icon"><i class="ph ph-trophy"></i></span><strong>${stats.longestStreak}</strong><span>Longest streak</span></article><article class="streak-stat-card"><span class="stat-icon"><i class="ph ph-calendar-check"></i></span><strong>${stats.totalReadingDays}</strong><span>Active reading days</span></article><article class="streak-stat-card"><span class="stat-icon"><i class="ph ph-books"></i></span><strong>${stats.totalCompletedReadings}</strong><span>Completed readings</span></article>`;
+        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const monthDays = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+        const offset = monthStart.getDay();
+        const cells = Array.from({ length: offset + monthDays }, (_, index) => { if (index < offset) return '<span class="calendar-cell is-blank"></span>'; const day = index - offset + 1; const date = localDate(new Date(monthStart.getFullYear(), monthStart.getMonth(), day)); const state = stats.activity.some(item => item.date === date) ? 'is-complete' : date === today ? 'is-today' : date > today ? 'is-future' : 'is-missed'; return `<span class="calendar-cell ${state}" title="${date}">${day}</span>`; }).join('');
+        document.getElementById('streak-calendar').innerHTML = `<div class="calendar-weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="calendar-grid">${cells}</div>`;
+        document.getElementById('streak-message').textContent = stats.currentStreak ? 'Keep your rhythm going.' : 'Keep going. Start again today.';
+        const recent = stats.activity.slice(-7).reverse();
+        document.getElementById('recent-activity').innerHTML = recent.length ? recent.map(item => `<div class="recent-activity-row"><span class="activity-dot"></span><span>${formatDate(item.date)}</span><small>${item.activityType === 'plan-reading' ? 'Reading plan completed' : 'Bible study recorded'}</small></div>`).join('') : '<p class="helper-text">Your recent reading days will appear here.</p>';
+        document.getElementById('streak-stat').textContent = stats.currentStreak;
+    }
 
     function planProgress(plan) { const completed = plan.schedule.filter(item => item.completed).length; return { completed, remaining: plan.schedule.length - completed, percent: plan.schedule.length ? Math.round(completed / plan.schedule.length * 100) : 0 }; }
     function activePlan() { return plans.find(plan => plan.status === 'active'); }
@@ -177,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('today-action').innerHTML = todayStudy ? 'Open today\'s study <i class="ph ph-arrow-right"></i>' : 'Start today\'s study <i class="ph ph-arrow-right"></i>';
         document.getElementById('today-action').dataset.open = todayStudy?.id || '';
         renderDashboardPlan();
+        renderStreakDetails();
         document.getElementById('study-count').textContent = studies.length;
         document.getElementById('chapter-count').textContent = studies.length;
         document.getElementById('favorite-count').textContent = studies.filter(study => study.favorite).length;
@@ -195,8 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function calculateStreak() {
         const planDates = plans.flatMap(plan => plan.schedule.filter(item => item.completed).map(item => item.date)); const dates = new Set([...studies.map(study => study.date), ...planDates]); let count = 0; const cursor = new Date(`${today}T12:00:00`);
-        while (dates.has(cursor.toISOString().slice(0, 10))) { count++; cursor.setDate(cursor.getDate() - 1); }
-        return count;
+            return streakStats().currentStreak;
     }
     function addLesson(value = '') { const row = document.createElement('div'); row.className = 'lesson-input-row'; row.innerHTML = `<i class="ph ph-caret-right"></i><input type="text" placeholder="What will you remember?" value="${escapeHtml(value)}"><button type="button" class="remove-lesson" aria-label="Remove lesson"><i class="ph ph-x"></i></button>`; document.getElementById('lessons-container').appendChild(row); row.querySelector('input').focus(); }
     function resetEditor() { editingId = null; form.reset(); document.getElementById('date').value = today; document.getElementById('editor-title').textContent = 'New study'; document.getElementById('draft-badge').innerHTML = '<i class="ph ph-pencil-simple"></i> Draft'; document.getElementById('lessons-container').innerHTML = ''; addLesson(); document.getElementById('recovery-alert').classList.add('hidden'); }
@@ -210,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-plan-btn').addEventListener('click', createCustomPlan);
     document.getElementById('plan-setup').addEventListener('submit', event => { event.preventDefault(); const name = document.getElementById('plan-setup-name').value.trim(); const description = document.getElementById('plan-setup-description').value.trim(); const startDate = document.getElementById('plan-setup-start').value; const targetDate = document.getElementById('plan-setup-target').value; const readings = document.getElementById('plan-setup-readings').value.split(',').map(reference => reference.trim()).filter(Boolean); if (!name || !startDate || !targetDate || targetDate < startDate || !readings.length) { alert('Add a name, valid dates, and at least one Bible reference.'); return; } const definitionId = document.getElementById('plan-setup-definition').value; if (!confirm(`Start ${name} on ${formatDate(startDate)}?`)) return; startPlan({ id: definitionId, planName: name, description, duration: readings.length, readings, targetDate }, startDate); event.target.classList.add('hidden'); });
     document.getElementById('cancel-plan-setup').addEventListener('click', () => document.getElementById('plan-setup').classList.add('hidden'));
+        document.getElementById('add-streak-widget').addEventListener('click', () => { localStorage.setItem('quiet-word-streak-widget', 'enabled'); showToast('Streak widget preference saved for this device.'); });
     document.getElementById('add-prayer-btn').addEventListener('click', () => { document.getElementById('prayer-form').classList.toggle('hidden'); if (!document.getElementById('prayer-form').classList.contains('hidden')) document.getElementById('prayer-title').focus(); });
     document.getElementById('prayer-form').addEventListener('submit', event => { event.preventDefault(); prayers.unshift({ id: uid(), title: document.getElementById('prayer-title').value.trim(), text: document.getElementById('prayer-text').value.trim(), date: today }); savePrayers(); event.target.reset(); event.target.classList.add('hidden'); renderPrayers(); renderInsights(); });
     document.getElementById('add-collection-btn').addEventListener('click', () => { if (!studies.length) { alert('Save a study before creating a collection.'); return; } const name = prompt('Name this collection:'); if (!name?.trim()) return; const description = prompt('What is this collection about?') || ''; const selection = prompt(`Add study numbers separated by commas:\n${studies.map((study, index) => `${index + 1}. ${study.reference}`).join('\n')}`) || ''; const studyIds = selection.split(',').map(value => studies[Number(value.trim()) - 1]?.id).filter(Boolean); collections.unshift({ id: uid(), name: name.trim(), description: description.trim(), studyIds, createdAt: today }); saveCollections(); renderCollections(); showView('collections'); });
