@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const studyKey = 'quiet-word-studies';
     const draftKey = 'quiet-word-draft';
+    const themeKey = 'quiet-word-theme';
     const today = new Date().toISOString().slice(0, 10);
     const form = document.getElementById('study-form');
     const fields = ['reference', 'date', 'learned', 'reflection', 'application', 'questions', 'prayer'];
@@ -12,6 +13,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const getLessons = () => [...document.querySelectorAll('#lessons-container input')].map(input => input.value.trim()).filter(Boolean);
     const studyText = study => Object.values(study).join(' ').toLowerCase();
     const saveStudies = () => localStorage.setItem(studyKey, JSON.stringify(studies));
+
+    function setTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        localStorage.setItem(themeKey, theme);
+        document.querySelectorAll('[data-theme-toggle]').forEach(button => {
+            const dark = theme === 'dark';
+            button.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+            button.innerHTML = `<i class="ph ${dark ? 'ph-sun' : 'ph-moon'}"></i><span>${dark ? 'Light mode' : 'Dark mode'}</span>`;
+        });
+    }
 
     function showView(target) {
         document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === target));
@@ -67,6 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', event => { event.preventDefault(); const study = { id: editingId || crypto.randomUUID(), ...Object.fromEntries(fields.map(field => [field, document.getElementById(field).value.trim()])), lessons: getLessons(), favorite: editingId ? studies.find(item => item.id === editingId).favorite : false }; studies = editingId ? studies.map(item => item.id === editingId ? study : item) : [study, ...studies]; saveStudies(); localStorage.removeItem(draftKey); resetEditor(); renderAll(); showView('dashboard'); const toast = document.getElementById('toast'); toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2800); });
     document.addEventListener('click', event => { const open = event.target.closest('[data-open]'); const favorite = event.target.closest('[data-favorite]'); const remove = event.target.closest('[data-delete]'); if (open?.dataset.open) openStudy(open.dataset.open); if (favorite) { const item = studies.find(study => study.id === favorite.dataset.favorite); item.favorite = !item.favorite; saveStudies(); renderAll(); } if (remove && confirm('Delete this study?')) { studies = studies.filter(study => study.id !== remove.dataset.delete); saveStudies(); renderAll(); } });
     document.getElementById('search-input').addEventListener('input', renderAll); document.getElementById('sort-select').addEventListener('change', renderAll); document.getElementById('mobile-menu').addEventListener('click', () => document.querySelector('.sidebar').classList.toggle('open'));
+    document.querySelectorAll('[data-theme-toggle]').forEach(button => button.addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')));
+    setTheme(localStorage.getItem(themeKey) || 'light');
     const draft = JSON.parse(localStorage.getItem(draftKey) || 'null'); if (draft && (draft.reference || draft.learned || draft.reflection)) { fields.forEach(field => { document.getElementById(field).value = draft[field] || ''; }); document.getElementById('lessons-container').innerHTML = ''; (draft.lessons || []).forEach(addLesson); document.getElementById('recovery-alert').classList.remove('hidden'); } else resetEditor();
     document.getElementById('welcome-date').textContent = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date()); renderAll();
 });
