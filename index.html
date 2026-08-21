@@ -12,15 +12,20 @@
     <aside class="sidebar">
         <a class="brand" href="#dashboard" data-target="dashboard"><span class="brand-mark"><i class="ph ph-book-open"></i></span><span><strong>Quiet Word</strong><small>Bible study journal</small></span></a>
         <nav class="nav-links" aria-label="Main navigation">
+            <span class="nav-label">Main</span>
             <a href="#dashboard" data-target="dashboard" class="active"><i class="ph ph-house"></i> Dashboard</a>
             <a href="#new-study" data-target="new-study"><i class="ph ph-plus"></i> New study</a>
             <a href="#history" data-target="history"><i class="ph ph-books"></i> My studies</a>
             <a href="#favorites" data-target="favorites"><i class="ph ph-star"></i> Favorites</a>
+            <span class="nav-label nav-label-spaced">Grow</span>
             <a href="#progress" data-target="progress"><i class="ph ph-chart-line-up"></i> Progress</a>
             <a href="#plans" data-target="plans"><i class="ph ph-calendar-check"></i> Reading plans</a>
             <a href="#prayers" data-target="prayers"><i class="ph ph-hands-praying"></i> Prayer journal</a>
+            <span class="nav-label nav-label-spaced">Organize</span>
             <a href="#collections" data-target="collections"><i class="ph ph-folders"></i> Collections</a>
             <a href="#insights" data-target="insights"><i class="ph ph-sparkle"></i> Insights</a>
+            <span class="nav-label nav-label-spaced">Personalize</span>
+            <a href="#settings" data-target="settings"><i class="ph ph-sliders-horizontal"></i> Settings</a>
         </nav>
         <div class="sidebar-bottom"><div class="profile"><span class="avatar">D</span><span><strong>Daniel</strong><small>Personal journal</small></span></div><button class="theme-toggle sign-out" type="button" data-theme-toggle><i class="ph ph-moon"></i><span>Dark mode</span></button><button class="sign-out" id="sign-out"><i class="ph ph-sign-out"></i> Sign out</button></div>
     </aside>
@@ -36,6 +41,7 @@
 +        <section id="prayers" class="view"><header class="page-header"><div><p class="eyebrow">Bring it honestly</p><h1>Prayer journal</h1><p class="lede">Keep your prayers, hopes, and answered prayers in one quiet place.</p></div><button class="btn primary-btn" id="add-prayer-btn"><i class="ph ph-plus"></i> New prayer</button></header><form id="prayer-form" class="form-card hidden"><div class="section-title"><h3>New prayer entry</h3><p>Write as much or as little as you need.</p></div><label class="sub-label" for="prayer-title">Title</label><input type="text" id="prayer-title" required placeholder="What is on your heart?"><label class="sub-label" for="prayer-text">Prayer</label><textarea id="prayer-text" rows="7" required placeholder="Write your prayer here..."></textarea><div class="form-actions"><span class="save-note">Saved privately in this browser.</span><button class="btn primary-btn" type="submit"><i class="ph ph-check"></i> Save prayer</button></div></form><div id="prayers-list" class="v2-list"></div></section>
 +        <section id="collections" class="view"><header class="page-header"><div><p class="eyebrow">Gather what matters</p><h1>Collections</h1><p class="lede">Group studies by a theme, season, or question you want to revisit.</p></div><button class="btn primary-btn" id="add-collection-btn"><i class="ph ph-plus"></i> New collection</button></header><div id="collections-list" class="v2-grid"></div></section>
 +        <section id="insights" class="view"><header class="page-header"><div><p class="eyebrow">Notice your rhythm</p><h1>Personal insights</h1><p class="lede">A gentle view of the patterns emerging in your journal.</p></div></header><div id="insights-grid" class="insights-grid"></div></section>
++        <section id="settings" class="view"><header class="page-header"><div><p class="eyebrow">Make it yours</p><h1>Settings</h1><p class="lede">Choose a quiet color palette while keeping your light or dark reading preference.</p></div></header><div class="settings-grid"><section class="form-card setting-panel"><div class="section-title"><h3>Appearance</h3><p>Light and dark mode stay independent from your accent color.</p></div><button class="theme-toggle setting-theme-button btn" type="button" data-theme-toggle><i class="ph ph-moon"></i><span>Dark mode</span></button></section><section class="form-card setting-panel accent-panel"><div class="section-title"><h3>Accent theme</h3><p>Your choice changes the buttons, highlights, progress, icons, and focus states across Quiet Word.</p></div><div id="accent-options" class="accent-options" role="radiogroup" aria-label="Accent theme"></div></section></div></section>
     </main>
 +    <script src="script.js"></script>
 +</body>

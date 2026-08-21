@@ -8,10 +8,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const studyKey = 'quiet-word-studies';
     const draftKey = 'quiet-word-draft';
     const themeKey = 'quiet-word-theme';
+    const accentKey = 'quiet-word-accent';
     const planKey = 'quiet-word-plans';
     const streakKey = 'quiet-word-streak-activity';
     const prayerKey = 'quiet-word-prayers';
     const collectionKey = 'quiet-word-collections';
+    const ACCENT_THEMES = [
+        { id: 'sage', name: 'Sage Green', colors: ['#dce9df', '#3f6955', '#29483b', '#e2b872'] },
+        { id: 'forest', name: 'Forest Green', colors: ['#d7e4d8', '#315c48', '#214536', '#c8a86b'] },
+        { id: 'sand', name: 'Warm Sand', colors: ['#eee4d2', '#8a6d47', '#5c4933', '#c79551'] },
+        { id: 'blue', name: 'Soft Blue', colors: ['#dce8ed', '#416a78', '#294c59', '#c6a76b'] },
+        { id: 'rose', name: 'Dusty Rose', colors: ['#eee0df', '#8a5960', '#633d45', '#c69672'] },
+        { id: 'burgundy', name: 'Deep Burgundy', colors: ['#eadbd9', '#783f48', '#572c35', '#c49a6c'] },
+        { id: 'amber', name: 'Warm Amber', colors: ['#f0e5ca', '#966d2e', '#694b22', '#b8853d'] },
+        { id: 'slate', name: 'Slate', colors: ['#dfe5e5', '#50666a', '#33484d', '#b49b70'] }
+    ];
     const localDate = value => { const date = value instanceof Date ? value : new Date(value); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
     const today = localDate(new Date());
     const form = document.getElementById('study-form');
@@ -55,6 +66,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function emptyState(title, copy) { return `<div class="empty-state"><i class="ph ph-notebook"></i><h3>${title}</h3><p>${copy}</p></div>`; }
 
+    function setAccent(accent) {
+        const selected = ACCENT_THEMES.some(theme => theme.id === accent) ? accent : 'sage';
+        document.documentElement.dataset.accent = selected;
+        localStorage.setItem(accentKey, selected);
+        renderAccentOptions();
+    }
+
+    function renderAccentOptions() {
+        const target = document.getElementById('accent-options');
+        if (!target) return;
+        const selected = document.documentElement.dataset.accent || 'sage';
+        target.innerHTML = ACCENT_THEMES.map(theme => `<button class="accent-option ${theme.id === selected ? 'is-selected' : ''}" type="button" role="radio" aria-checked="${theme.id === selected}" data-accent-option="${theme.id}"><span class="accent-swatch" style="--swatch-soft:${theme.colors[0]};--swatch-main:${theme.colors[1]};--swatch-deep:${theme.colors[2]};--swatch-gold:${theme.colors[3]}"><i></i><i></i><i></i><i></i></span><span>${theme.name}</span>${theme.id === selected ? '<i class="ph ph-check accent-check"></i>' : ''}</button>`).join('');
+    }
+
     function syncReadingActivity() {
         const records = new Map();
         studies.forEach(study => { if (study.date && study.date <= today) records.set(study.date, { date: study.date, activityType: 'study', sourceId: study.id }); });
@@ -89,6 +114,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const recent = stats.activity.slice(-7).reverse();
         document.getElementById('recent-activity').innerHTML = recent.length ? recent.map(item => `<div class="recent-activity-row"><span class="activity-dot"></span><span>${formatDate(item.date)}</span><small>${item.activityType === 'plan-reading' ? 'Reading plan completed' : 'Bible study recorded'}</small></div>`).join('') : '<p class="helper-text">Your recent reading days will appear here.</p>';
         document.getElementById('streak-stat').textContent = stats.currentStreak;
+    }
+
+    function renderDashboardInsight() {
+        const recentStudy = [...studies].sort((a, b) => new Date(b.date) - new Date(a.date)).find(study => study.learned || study.reflection);
+        let section = document.getElementById('dashboard-insight');
+        if (!recentStudy) { section?.remove(); return; }
+        if (!section) { section = document.createElement('section'); section.id = 'dashboard-insight'; section.className = 'dashboard-insight'; document.getElementById('recent-list').after(section); }
+        const insight = recentStudy.reflection || recentStudy.learned;
+        section.innerHTML = `<div><p class="eyebrow">Your insight</p><blockquote>“${escapeHtml(insight.slice(0, 180))}${insight.length > 180 ? '…' : ''}”</blockquote><cite>${escapeHtml(recentStudy.reference)}</cite></div><button class="text-btn" data-open="${recentStudy.id}">View study <i class="ph ph-arrow-up-right"></i></button>`;
     }
 
     function planProgress(plan) { const completed = plan.schedule.filter(item => item.completed).length; return { completed, remaining: plan.schedule.length - completed, percent: plan.schedule.length ? Math.round(completed / plan.schedule.length * 100) : 0 }; }
@@ -192,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('[data-target]').forEach(link => link.classList.toggle('active', link.dataset.target === target && link.closest('.nav-links')));
         if (target === 'dashboard' || target === 'history' || target === 'favorites' || target === 'progress') renderAll();
         if (['plans', 'prayers', 'collections', 'insights'].includes(target)) renderV2();
+        if (target === 'settings') renderAccentOptions();
         document.querySelector('.sidebar').classList.remove('open');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -218,10 +253,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('today-action').dataset.open = todayStudy?.id || '';
         renderDashboardPlan();
         renderStreakDetails();
+        renderDashboardInsight();
         document.getElementById('study-count').textContent = studies.length;
         document.getElementById('chapter-count').textContent = studies.length;
         document.getElementById('favorite-count').textContent = studies.filter(study => study.favorite).length;
-        document.getElementById('streak-stat').textContent = calculateStreak();
+        const stats = streakStats();
+        document.getElementById('streak-stat').textContent = stats.currentStreak;
+        const streakCaption = document.querySelector('.stat-panel small');
+        if (streakCaption) streakCaption.textContent = stats.currentStreak ? `Longest streak · ${stats.longestStreak} days` : 'Begin your first day of consistent reading.';
+        document.getElementById('welcome-date').textContent = `${new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())} · ${studies.filter(study => study.date === today).length} ${studies.filter(study => study.date === today).length === 1 ? 'study' : 'studies'} today`;
         document.getElementById('progress-chapters').textContent = studies.length;
         document.getElementById('current-book').textContent = sorted[0]?.reference.split(' ')[0] || '—';
         document.getElementById('progress-percent').textContent = studies.length ? `${Math.min(studies.length * 5, 100)}%` : '0%';
@@ -256,10 +296,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-collection-btn').addEventListener('click', () => { if (!studies.length) { alert('Save a study before creating a collection.'); return; } const name = prompt('Name this collection:'); if (!name?.trim()) return; const description = prompt('What is this collection about?') || ''; const selection = prompt(`Add study numbers separated by commas:\n${studies.map((study, index) => `${index + 1}. ${study.reference}`).join('\n')}`) || ''; const studyIds = selection.split(',').map(value => studies[Number(value.trim()) - 1]?.id).filter(Boolean); collections.unshift({ id: uid(), name: name.trim(), description: description.trim(), studyIds, createdAt: today }); saveCollections(); renderCollections(); showView('collections'); });
     document.getElementById('plans-list').addEventListener('change', event => { const input = event.target.closest('[data-plan]'); if (!input) return; const plan = plans.find(item => item.id === input.dataset.plan); const planItem = plan?.schedule[Number(input.dataset.planItem)]; if (!planItem) return; planItem.completed = input.checked; planItem.completedAt = input.checked ? new Date().toISOString() : null; plan.completedReadings = plan.schedule.filter(item => item.completed).map(item => item.dayNumber); if (plan.completedReadings.length === plan.schedule.length) { plan.status = 'completed'; plan.completedAt = new Date().toISOString(); } else if (plan.status === 'completed') plan.status = 'active'; savePlans(); renderAll(); renderPlans(); });
     form.addEventListener('submit', event => { event.preventDefault(); const previous = studies.find(item => item.id === editingId); const study = { ...previous, id: editingId || uid(), ...Object.fromEntries(fields.map(field => [field, document.getElementById(field).value.trim()])), lessons: getLessons(), favorite: previous?.favorite || false, completed: previous?.completed ?? true }; studies = editingId ? studies.map(item => item.id === editingId ? study : item) : [study, ...studies]; saveStudies(); localStorage.removeItem(draftKey); resetEditor(); renderAll(); showView('dashboard'); const toast = document.getElementById('toast'); toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2800); });
-    document.addEventListener('click', event => { const open = event.target.closest('[data-open]'); const favorite = event.target.closest('[data-favorite]'); const remove = event.target.closest('[data-delete]'); const deletePlan = event.target.closest('[data-delete-plan]'); const deletePrayer = event.target.closest('[data-delete-prayer]'); const deleteCollection = event.target.closest('[data-delete-collection]'); const startPredefined = event.target.closest('[data-start-predefined]'); const startSaved = event.target.closest('[data-start-saved]'); const openPlan = event.target.closest('[data-open-plan]'); const complete = event.target.closest('[data-complete-reading]'); const createStudy = event.target.closest('[data-create-study]'); if (open?.dataset.open) openStudy(open.dataset.open); if (favorite) { const item = studies.find(study => study.id === favorite.dataset.favorite); item.favorite = !item.favorite; saveStudies(); renderAll(); } if (remove && confirm('Delete this study?')) { studies = studies.filter(study => study.id !== remove.dataset.delete); saveStudies(); renderAll(); } if (deletePlan && confirm('Delete this reading plan?')) { plans = plans.filter(plan => plan.id !== deletePlan.dataset.deletePlan); savePlans(); renderPlans(); renderAll(); } if (deletePrayer && confirm('Delete this prayer?')) { prayers = prayers.filter(prayer => prayer.id !== deletePrayer.dataset.deletePrayer); savePrayers(); renderPrayers(); renderInsights(); } if (deleteCollection && confirm('Delete this collection?')) { collections = collections.filter(collection => collection.id !== deleteCollection.dataset.deleteCollection); saveCollections(); renderCollections(); } if (startPredefined) { const definition = PLAN_DEFINITIONS.find(item => item.id === startPredefined.dataset.startPredefined); if (definition) openPlanSetup(definition); } if (startSaved) { const plan = plans.find(item => item.id === startSaved.dataset.startSaved); const input = document.getElementById(`plan-start-${plan?.id}`); if (plan && input?.value && confirm(`Start ${plan.planName} on ${formatDate(input.value)}?`)) { plan.startDate = input.value; plan.schedule = plan.schedule.map((item, index) => ({ ...item, date: addDays(plan.startDate, index) })); plan.targetDate = plan.schedule[plan.schedule.length - 1]?.date || plan.startDate; plan.status = 'active'; plans.forEach(item => { if (item.id !== plan.id && item.status === 'active') item.status = 'saved'; }); savePlans(); renderAll(); renderPlans(); } } if (openPlan) { const plan = plans.find(item => item.id === openPlan.dataset.openPlan); if (plan) showPlanDetail(plan); } if (complete) completeReading(complete.dataset.completeReading, complete.dataset.completeDay); if (createStudy) { const plan = plans.find(item => item.id === createStudy.dataset.createStudy); const reading = plan?.schedule.find(item => item.dayNumber === Number(createStudy.dataset.createDay)); resetEditor(); if (reading) document.getElementById('reference').value = reading.reference; showView('new-study'); } if (event.target.closest('[data-scroll-catalog]')) document.querySelector('.plans-catalog-heading')?.scrollIntoView({ behavior: 'smooth' }); if (event.target.closest('[data-close-plan]')) document.getElementById('plan-detail').innerHTML = ''; });
+    document.addEventListener('click', event => { const open = event.target.closest('[data-open]'); const favorite = event.target.closest('[data-favorite]'); const remove = event.target.closest('[data-delete]'); const deletePlan = event.target.closest('[data-delete-plan]'); const deletePrayer = event.target.closest('[data-delete-prayer]'); const deleteCollection = event.target.closest('[data-delete-collection]'); const startPredefined = event.target.closest('[data-start-predefined]'); const startSaved = event.target.closest('[data-start-saved]'); const openPlan = event.target.closest('[data-open-plan]'); const complete = event.target.closest('[data-complete-reading]'); const createStudy = event.target.closest('[data-create-study]'); const dynamicTarget = event.target.closest('#dashboard-plan-card [data-target]'); if (dynamicTarget) { event.preventDefault(); showView(dynamicTarget.dataset.target); } if (open?.dataset.open) openStudy(open.dataset.open); if (favorite) { const item = studies.find(study => study.id === favorite.dataset.favorite); item.favorite = !item.favorite; saveStudies(); renderAll(); } if (remove && confirm('Delete this study?')) { studies = studies.filter(study => study.id !== remove.dataset.delete); saveStudies(); renderAll(); } if (deletePlan && confirm('Delete this reading plan?')) { plans = plans.filter(plan => plan.id !== deletePlan.dataset.deletePlan); savePlans(); renderPlans(); renderAll(); } if (deletePrayer && confirm('Delete this prayer?')) { prayers = prayers.filter(prayer => prayer.id !== deletePrayer.dataset.deletePrayer); savePrayers(); renderPrayers(); renderInsights(); } if (deleteCollection && confirm('Delete this collection?')) { collections = collections.filter(collection => collection.id !== deleteCollection.dataset.deleteCollection); saveCollections(); renderCollections(); } if (startPredefined) { const definition = PLAN_DEFINITIONS.find(item => item.id === startPredefined.dataset.startPredefined); if (definition) openPlanSetup(definition); } if (startSaved) { const plan = plans.find(item => item.id === startSaved.dataset.startSaved); const input = document.getElementById(`plan-start-${plan?.id}`); if (plan && input?.value && confirm(`Start ${plan.planName} on ${formatDate(input.value)}?`)) { plan.startDate = input.value; plan.schedule = plan.schedule.map((item, index) => ({ ...item, date: addDays(plan.startDate, index) })); plan.targetDate = plan.schedule[plan.schedule.length - 1]?.date || plan.startDate; plan.status = 'active'; plans.forEach(item => { if (item.id !== plan.id && item.status === 'active') item.status = 'saved'; }); savePlans(); renderAll(); renderPlans(); } } if (openPlan) { const plan = plans.find(item => item.id === openPlan.dataset.openPlan); if (plan) showPlanDetail(plan); } if (complete) completeReading(complete.dataset.completeReading, complete.dataset.completeDay); if (createStudy) { const plan = plans.find(item => item.id === createStudy.dataset.createStudy); const reading = plan?.schedule.find(item => item.dayNumber === Number(createStudy.dataset.createDay)); resetEditor(); if (reading) document.getElementById('reference').value = reading.reference; showView('new-study'); } if (event.target.closest('[data-scroll-catalog]')) document.querySelector('.plans-catalog-heading')?.scrollIntoView({ behavior: 'smooth' }); if (event.target.closest('[data-close-plan]')) document.getElementById('plan-detail').innerHTML = ''; });
     document.getElementById('search-input').addEventListener('input', renderAll); document.getElementById('sort-select').addEventListener('change', renderAll); document.getElementById('mobile-menu').addEventListener('click', () => document.querySelector('.sidebar').classList.toggle('open'));
     document.querySelectorAll('[data-theme-toggle]').forEach(button => button.addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')));
+    document.addEventListener('click', event => { const accent = event.target.closest('[data-accent-option]'); if (accent) setAccent(accent.dataset.accentOption); });
     setTheme(localStorage.getItem(themeKey) || 'light');
+    setAccent(localStorage.getItem(accentKey) || 'sage');
     const draft = JSON.parse(localStorage.getItem(draftKey) || 'null'); if (draft && (draft.reference || draft.learned || draft.reflection)) { fields.forEach(field => { document.getElementById(field).value = draft[field] || ''; }); document.getElementById('lessons-container').innerHTML = ''; (draft.lessons || []).forEach(addLesson); document.getElementById('recovery-alert').classList.remove('hidden'); } else resetEditor();
     document.getElementById('welcome-date').textContent = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date()); renderAll();
 });
