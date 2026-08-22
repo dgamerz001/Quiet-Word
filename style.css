@@ -3,8 +3,8 @@
     --muted: #71807a;
     --faint: #9aa7a1;
     --line: #e5ebe6;
-    --paper: #fff;
-    --canvas: #f6f8f5;
+    --paper: rgba(255, 255, 255, .88);
+    --canvas: rgba(246, 248, 245, .62);
     --sage: #dce9df;
     --green: #3f6955;
     --deep: #29483b;
@@ -14,13 +14,17 @@
 }
 * { box-sizing: border-box; }
 html { overflow-x: hidden; }
-body { margin: 0; background: var(--canvas); color: var(--ink); font: 15px var(--sans); display: flex; min-height: 100vh; overflow-x: hidden; }
+body { margin: 0; background: var(--canvas); color: var(--ink); font: 15px var(--sans); display: flex; min-height: 100vh; overflow-x: hidden; isolation: isolate; position: relative; }
+body::before, body::after { content: ''; position: fixed; inset: 0; pointer-events: none; }
+body::before { z-index: -2; background: url('Assets/bible-mountain.png') center bottom / cover no-repeat; }
+body::after { z-index: -1; background: linear-gradient(110deg, rgba(255, 250, 238, .84), rgba(255, 248, 231, .61) 48%, rgba(255, 244, 220, .7)); }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 img { max-width: 100%; height: auto; }
 :focus-visible { outline: 3px solid #8bb79a; outline-offset: 2px; }
-html[data-theme="dark"] { --ink: #f2f2ef; --muted: #aaa9a3; --faint: #777873; --line: #292a27; --paper: #111210; --canvas: #000; --sage: #191a17; --green: #9bc5a8; --deep: #a9d3b4; --gold: #e2b872; color-scheme: dark; }
-html[data-theme="dark"] .sidebar { background: #080908; }
+html[data-theme="dark"] { --ink: #f2f2ef; --muted: #aaa9a3; --faint: #777873; --line: #292a27; --paper: rgba(17, 18, 16, .9); --canvas: rgba(0, 0, 0, .58); --sage: #191a17; --green: #9bc5a8; --deep: #a9d3b4; --gold: #e2b872; color-scheme: dark; }
+html[data-theme="dark"] body::after { background: linear-gradient(110deg, rgba(5, 12, 8, .82), rgba(9, 16, 11, .7) 48%, rgba(17, 14, 8, .75)); }
+html[data-theme="dark"] .sidebar { background: rgba(8, 9, 8, .92); }
 html[data-theme="dark"] .brand-mark { color: #000; }
 html[data-theme="dark"] .avatar { background: #292b27; color: #e7eee9; }
 html[data-theme="dark"] input, html[data-theme="dark"] textarea, html[data-theme="dark"] select { background: #111210; color: var(--ink); border-color: var(--line); }
@@ -28,7 +32,7 @@ html[data-theme="dark"] input::placeholder, html[data-theme="dark"] textarea::pl
 html[data-theme="dark"] .today-panel { background: #171815; }
 html[data-theme="dark"] .dark-btn { background: #f2f2ef; color: #090a08; }
 html[data-theme="dark"] .progress-track { background: #242521; }
-.sidebar { width: 248px; position: fixed; inset: 0 auto 0 0; background: #fbfcfa; border-right: 1px solid var(--line); padding: 32px 20px 24px; display: flex; flex-direction: column; z-index: 5; overflow-y: auto; }
+.sidebar { width: 248px; position: fixed; inset: 0 auto 0 0; background: rgba(251, 252, 250, .9); border-right: 1px solid var(--line); padding: 32px 20px 24px; display: flex; flex-direction: column; z-index: 5; overflow-y: auto; }
 .brand { color: var(--ink); display: flex; align-items: center; gap: 11px; text-decoration: none; min-width: 0; }
 .brand-mark { width: 37px; height: 37px; flex: 0 0 auto; background: var(--deep); color: #fff; border-radius: 11px; display: grid; place-items: center; font-size: 20px; }
 .brand strong { display: block; font: 700 16px var(--serif); }
@@ -68,7 +72,7 @@ html[data-theme="dark"] .progress-track { background: #242521; }
 .icon-btn { min-width: 42px; min-height: 42px; background: transparent; color: var(--muted); padding: 7px; font-size: 19px; transition: color .18s ease, background-color .18s ease, transform .18s ease; }
 .icon-btn:hover { background: var(--sage); color: var(--deep); transform: translateY(-1px); }
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1fr) 235px; gap: 18px; margin-bottom: 50px; }
-.today-panel { background: var(--sage); padding: clamp(26px, 3.5vw, 36px); border-radius: 16px; min-height: 255px; box-shadow: 0 10px 30px #29483b12; }
+.today-panel { background: color-mix(in srgb, var(--sage) 86%, transparent); padding: clamp(26px, 3.5vw, 36px); border-radius: 16px; min-height: 255px; box-shadow: 0 10px 30px #29483b12; }
 .panel-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; }
 .today-panel h2 { font: 700 clamp(20px, 2vw, 24px) var(--serif); margin: 0; max-width: 400px; overflow-wrap: anywhere; }
 .today-panel > p { color: var(--muted); line-height: 1.6; margin: 20px 0 23px; }
@@ -104,7 +108,7 @@ html[data-theme="dark"] .progress-track { background: #242521; }
 .section-title { min-width: 0; }
 .section-title h3 { font: 700 17px var(--serif); margin: 0 0 5px; overflow-wrap: anywhere; }
 .section-title p { color: var(--muted); font-size: 13px; margin: 0; line-height: 1.5; }
-.form-card input[type="text"], textarea { width: 100%; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fcfdfb; padding: 14px 15px; color: var(--ink); outline: 0; transition: .2s; }
+.form-card input[type="text"], textarea { width: 100%; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: rgba(252, 253, 251, .74); padding: 14px 15px; color: var(--ink); outline: 0; transition: .2s; }
 html[data-theme="dark"] .form-card input[type="text"], html[data-theme="dark"] .form-card textarea { background: #192720; }
 .form-card input[type="text"]:focus, textarea:focus, .search-box:focus-within { border-color: #92b39c; box-shadow: 0 0 0 3px #dce9df; }
 .form-card input::placeholder, textarea::placeholder { color: #aeb8b2; }
@@ -168,6 +172,7 @@ html[data-theme="dark"] .form-card input[type="text"], html[data-theme="dark"] .
     .study-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 800px) {
+    body::before { background-position: center bottom; }
     .sidebar { transform: translateX(-100%); transition: transform .25s ease; width: min(280px, 86vw); box-shadow: 10px 0 30px #1d352b22; }
     .sidebar.open { transform: translateX(0); }
     .content { width: 100%; margin: 0; padding: 16px clamp(16px, 4vw, 28px) 60px; }
